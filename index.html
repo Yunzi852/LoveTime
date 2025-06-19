@@ -1,185 +1,279 @@
 import React, { useState, useEffect } from "react";
-import { Moon, Sun } from "lucide-react";
 
-const ElapsedTimer = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [timeElapsed, setTimeElapsed] = useState(calculateTimeElapsed());
-  const [stars, setStars] = useState([]);
-  const [hearts, setHearts] = useState([]);
+// 目标时间
+const TARGET_TIME = new Date("2025-05-31T12:29:00");
 
-  function calculateTimeElapsed() {
-    const targetDate = new Date("2025-05-31T12:29:00");
-    const difference = new Date().getTime() - targetDate.getTime();
+function getTimeDiff() {
+  const now = new Date();
+  let diff = Math.max(TARGET_TIME - now, 0);
 
-    if (difference <= 0) {
-      return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    }
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const day = now.getDate();
+  let nextYear = year;
+  if (
+    month > 4 ||
+    (month === 4 && (day > 31 || (day === 31 && now.getHours() >= 12 && now.getMinutes() >= 29)))
+  ) {
+    nextYear = year + 1;
+  }
+  // 计算完整的年数
+  const years = TARGET_TIME.getFullYear() - year - (now > TARGET_TIME ? 1 : 0);
 
-    return {
-      days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((difference / 1000 / 60) % 60),
-      seconds: Math.floor((difference / 1000) % 60),
-    };
+  // 月天时分秒
+  let left = new Date(diff);
+  let months = TARGET_TIME.getMonth() - month;
+  let days = TARGET_TIME.getDate() - day;
+  let hours = TARGET_TIME.getHours() - now.getHours();
+  let minutes = TARGET_TIME.getMinutes() - now.getMinutes();
+  let seconds = TARGET_TIME.getSeconds() - now.getSeconds();
+
+  if (seconds < 0) {
+    seconds += 60;
+    minutes--;
+  }
+  if (minutes < 0) {
+    minutes += 60;
+    hours--;
+  }
+  if (hours < 0) {
+    hours += 24;
+    days--;
+  }
+  if (days < 0) {
+    // 上一个月的天数
+    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    days += prevMonth;
+    months--;
+  }
+  if (months < 0) {
+    months += 12;
+    // years--; // 年数已在前面算好
   }
 
+  // 如果已经到达目标时间，全部为0
+  if (diff === 0) {
+    return { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 };
+  }
+
+  return { years, months, days, hours, minutes, seconds };
+}
+
+// 生成星星和爱心
+function generateStars(num) {
+  return Array.from({ length: num }).map((_, i) => ({
+    id: i,
+    top: `${Math.random() * 100}%`,
+    left: `${Math.random() * 100}%`,
+    size: `${Math.random() * 2 + 1}px`,
+    duration: `${Math.random() * 2 + 1}s`,
+    delay: `${Math.random() * 2}s`,
+  }));
+}
+function generateHearts(num) {
+  return Array.from({ length: num }).map((_, i) => ({
+    id: i,
+    top: `${Math.random() * 100}%`,
+    left: `${Math.random() * 100}%`,
+    size: `${Math.random() * 16 + 8}px`,
+    duration: `${Math.random() * 2 + 1}s`,
+    delay: `${Math.random() * 2}s`,
+    color: `hsl(${Math.floor(Math.random() * 30 + 340)}, 80%, 70%)`,
+  }));
+}
+
+export default function CountdownTimer() {
+  const [mode, setMode] = useState("light");
+  const [time, setTime] = useState(getTimeDiff());
+  const [stars] = useState(generateStars(80));
+  const [hearts] = useState(generateHearts(24));
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setTimeElapsed(calculateTimeElapsed());
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  });
-
-  useEffect(() => {
-    // 初始化星星
-    const newStars = Array.from({ length: 50 }, () => ({
-      id: Math.random(),
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 2 + 1,
-      opacity: Math.random(),
-    }));
-    setStars(newStars);
-
-    // 初始化爱心
-    const newHearts = Array.from({ length: 10 }, () => ({
-      id: Math.random(),
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 10 + 5,
-      opacity: Math.random(),
-      rotation: Math.random() * 360,
-    }));
-    setHearts(newHearts);
+    const t = setInterval(() => setTime(getTimeDiff()), 1000);
+    return () => clearInterval(t);
   }, []);
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
+  useEffect(() => {
+    document.body.style.background = mode === "dark" ? "#101528" : "#ffe0e7";
+  }, [mode]);
 
   return (
-<div className={`flex min-h-screen flex-col items-center justify-center ${isDarkMode ? "bg-black text-white" : "bg-gradient-to-br from-pink-100 to-purple-100 text-gray-800" } relative overflow-hidden`}>
-    {/* 背景元素 */}
-    {isDarkMode ? (
-    <>
-    {stars.map((star) => (
-    <div key={star.id}
-         className="absolute rounded-full bg-white"
-         style={{
-                left: `${star.x}%`,
-                top: `${star.y}%`,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                opacity: star.opacity + 0.5,
-                animation: `twinkle ${Math.random() * 3 + 2}s infinite`,
-              }} />
-    ))}
-    </>
-    ) : (
-    <>
-    {hearts.map((heart) => (
-    <div key={heart.id}
-         className="absolute animate-pulse"
-         style={{
-                left: `${heart.x}%`,
-                top: `${heart.y}%`,
-                width: `${heart.size}px`,
-                height: `${heart.size}px`,
-                opacity: heart.opacity,
-                transform: `rotate(${heart.rotation}deg)`,
-                animation: `float ${Math.random() * 5 + 3}s ease-in-out infinite`,
-              }}>
-        <svg viewBox="0 0 24 24"
-             fill="currentColor"
-             className="text-pink-400"
-             style={{
-                  width: "100%",
-                  height: "100%",
-                }}>
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-        </svg>
-    </div>
-    ))}
-    </>
-    )}
-
-    {/* 计时显示 */}
-    <div className="z-10 rounded-lg bg-black/30 p-8 text-center backdrop-blur-md md:p-12">
-        <h1 className="mb-8 text-4xl font-bold md:text-6xl">
-            距离2025年5月31日12:29已有
-        </h1>
-        <div className="flex flex-col items-center">
-            <div className="mb-8 text-center">
-                <span className="font-mono text-8xl font-bold">
-                    {String(timeElapsed.days).padStart(2, "0")}:
-                    {String(timeElapsed.hours).padStart(2, "0")}:
-                    {String(timeElapsed.minutes).padStart(2, "0")}:
-                    {String(timeElapsed.seconds).padStart(2, "0")}
-                </span>
-            </div>
-            <div className="text-2xl text-gray-300">
-                {timeElapsed.days}天 {timeElapsed.hours}小时 {timeElapsed.minutes}分钟 {timeElapsed.seconds}秒
-            </div>
+    <div className={`timer-root ${mode}`}>
+      <button className="mode-toggle" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
+        {mode === "dark" ? "切换到浅色" : "切换到深色"}
+      </button>
+      <div className="target-time">
+        目标：2025年5月31日12:29
+      </div>
+      <div className="timer-center">
+        <span className="timer-big">{time.years}<span className="timer-label">年</span></span>
+        <span className="timer-big">{time.months}<span className="timer-label">月</span></span>
+        <span className="timer-big">{time.days}<span className="timer-label">天</span></span>
+        <span className="timer-big">{time.hours.toString().padStart(2, "0")}<span className="timer-label">时</span></span>
+        <span className="timer-big">{time.minutes.toString().padStart(2, "0")}<span className="timer-label">分</span></span>
+        <span className="timer-big">{time.seconds.toString().padStart(2, "0")}<span className="timer-label">秒</span></span>
+      </div>
+      {mode === "dark" && (
+        <div className="star-bg">
+          {stars.map(star => (
+            <div
+              className="star"
+              key={star.id}
+              style={{
+                top: star.top,
+                left: star.left,
+                width: star.size,
+                height: star.size,
+                animationDuration: star.duration,
+                animationDelay: star.delay,
+              }}
+            />
+          ))}
         </div>
+      )}
+      {mode === "light" && (
+        <div className="heart-bg">
+          {hearts.map(heart => (
+            <div
+              className="heart"
+              key={heart.id}
+              style={{
+                top: heart.top,
+                left: heart.left,
+                width: heart.size,
+                height: heart.size,
+                animationDuration: heart.duration,
+                animationDelay: heart.delay,
+                color: heart.color,
+              }}
+            >
+              <svg viewBox="0 0 32 29.6" style={{ width: "100%", height: "100%" }}>
+                <path
+                  d="M23.6,0c-2.9,0-5.4,1.7-6.6,4.2C15.8,1.7,13.3,0,10.4,0C4.7,0,0,4.7,0,10.4
+                  c0,7.7,12.4,17.1,15.1,19c0.6,0.4,1.3,0.4,1.9,0c2.7-1.9,15.1-11.3,15.1-19C32,4.7,27.3,0,23.6,0z"
+                  fill="currentColor"
+                />
+              </svg>
+            </div>
+          ))}
+        </div>
+      )}
+      <style jsx>{`
+        .timer-root {
+          min-height: 100vh;
+          width: 100vw;
+          overflow: hidden;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', monospace;
+        }
+        .timer-root.light {
+          background: linear-gradient(135deg, #ffe0e7 0%, #fff4d2 100%);
+        }
+        .timer-root.dark {
+          background: #101528;
+        }
+        .mode-toggle {
+          position: absolute;
+          top: 20px;
+          right: 30px;
+          z-index: 10;
+          border: none;
+          background: rgba(255,255,255,0.25);
+          padding: 0.5em 1.2em;
+          border-radius: 20px;
+          font-size: 1.1em;
+          cursor: pointer;
+        }
+        .target-time {
+          font-size: 1.1em;
+          margin-bottom: 1.5em;
+          color: #888;
+          font-weight: 500;
+          letter-spacing: 1px;
+        }
+        .timer-center {
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          gap: 0.85em;
+          font-variant-numeric: tabular-nums;
+        }
+        .timer-big {
+          font-size: 2.7em;
+          font-weight: bold;
+          letter-spacing: 0.04em;
+          font-family: inherit;
+          color: var(--timer-main, #dc277a);
+          background: var(--timer-bg, linear-gradient(90deg, #dc277a, #ff692d));
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          position: relative;
+        }
+        .timer-label {
+          font-size: 0.45em;
+          font-weight: 600;
+          color: #888;
+          margin-left: 0.12em;
+          letter-spacing: 0.02em;
+          vertical-align: top;
+        }
+        .timer-root.dark .timer-big {
+          --timer-main: #fff;
+          --timer-bg: linear-gradient(90deg, #fff 60%, #6fd0ff 100%);
+          filter: drop-shadow(0 2px 9px #00364f44);
+        }
+        .timer-root.dark .timer-label {
+          color: #e8edf6;
+        }
+        .timer-root.light .timer-big {
+          --timer-main: #dc277a;
+          --timer-bg: linear-gradient(90deg, #dc277a 60%, #ff692d 100%);
+          filter: drop-shadow(0 1px 7px #ffb3e244);
+        }
+
+        /* 星空背景 */
+        .star-bg {
+          pointer-events: none;
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+        }
+        .star {
+          position: absolute;
+          border-radius: 50%;
+          background: #fff;
+          opacity: 0.88;
+          box-shadow: 0 0 6px #c9e8ff;
+          animation: star-twinkle 1.5s infinite alternate;
+        }
+        @keyframes star-twinkle {
+          0% { opacity: 0.5; }
+          50% { opacity: 1; }
+          100% { opacity: 0.4; }
+        }
+
+        /* 爱心背景 */
+        .heart-bg {
+          pointer-events: none;
+          position: fixed;
+          inset: 0;
+          z-index: 0;
+        }
+        .heart {
+          position: absolute;
+          animation: heart-twinkle 1.7s infinite alternate;
+          opacity: 0.8;
+        }
+        @keyframes heart-twinkle {
+          0% { opacity: 0.55; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.15); }
+          100% { opacity: 0.5; transform: scale(0.9); }
+        }
+      `}</style>
     </div>
-
-    {/* 主题切换按钮 */}
-    <button onClick={toggleDarkMode}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 backdrop-blur-md transition-colors hover:bg-white/20"
-            aria-label="切换主题">
-        {isDarkMode ? (
-        <Sun className="size-6 text-yellow-400" />
-        ) : (
-        <Moon className="size-6 text-gray-800" />
-        )}
-    </button>
-
-    <style jsx>
-        {
-            ` @keyframes twinkle
-
-        {
-            0%, 100%
-
-        {
-            opacity: $
-
-        {
-            Math .random() * 0.5 + 0.3
-        }
-
-        ;
-        transform: scale(1);
-        }
-
-        50% {
-            opacity: $
-
-        {
-            Math .random() * 0.5 + 0.8
-        }
-
-        ;
-        transform: scale(1.5);
-        }
-        }
-
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0) rotate(${Math.random() * 360}deg);
-            }
-
-            50% {
-                transform: translateY(-20px) rotate(${Math.random() * 360}deg);
-            }
-        }
-
-        `
-        }
-    </style>
-</div>
   );
-};
-
-export default ElapsedTimer;
+}
